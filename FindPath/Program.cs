@@ -16,7 +16,7 @@ namespace FindPath
                 start = Convert.ToInt32(Console.ReadLine());
                 Console.Write("Input target:");
                 target = Convert.ToInt32(Console.ReadLine());
-                findPathSolver.Solve(start, target);
+                findPathSolver.Solve(start, target, Model.Normal);
                 Console.WriteLine(findPathSolver.Output());
             }
         }

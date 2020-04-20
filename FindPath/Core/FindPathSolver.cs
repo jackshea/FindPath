@@ -1,6 +1,5 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace FindPath.Core
@@ -9,136 +8,138 @@ namespace FindPath.Core
     {
         private int start;
         private int target;
-        private Node tail;
+        private Node head;
         private HashSet<int> visited = new HashSet<int>();
 
         public int MaxDistance { get; private set; }
+        private string[] OptNames = new[] { "", "+1", "-1", "x2", "/2", "^2", "^3" };
 
-        public bool Solve(int start, int target)
+        // 反向搜索，从Target 找到Start.
+        // 好处是防止平方立方溢出，且如果开方等操作会产出小数，则可以不进行开方操作，适当剪枝。
+        public void Solve(int start, int target, Model model)
         {
             this.start = start;
             this.target = target;
             int distance = 0;
             MaxDistance = 0;
             visited.Clear();
-            tail = null;
+            head = null;
             Queue<Node> q = new Queue<Node>();
-            q.Enqueue(new Node(null, start, -1, 0));
+
+            q.Enqueue(new Node(null, target, Operation.None, 0));
 
             while (q.Count != 0)
             {
                 distance++;
                 Node top = q.Dequeue();
-                for (int i = 0; i < 6; i++)
+                foreach (var op in Enum.GetValues(typeof(Operation)))
                 {
-                    var num = Choose(top.Value, i);
+                    Operation opt = (Operation)op;
+                    if (model.HasFlag(Model.NoRepeat) && top.Opt == opt)
+                    {
+                        continue;
+                    }
+
+                    if (!CanAntiOperate(top.Value, opt))
+                    {
+                        continue;
+                    }
+
+                    var num = AntiOperate(top.Value, opt);
+
                     if (visited.Contains(num))
                     {
                         continue;
                     }
 
                     visited.Add(num);
-                    var node = new Node(top, num, i, distance);
-                    if (num == target)
+                    var node = new Node(top, num, opt, distance);
+                    if ((!model.HasFlag(Model.Disturb) && num == start) ||
+                        model.HasFlag(Model.Disturb) && num == start + distance)
                     {
                         MaxDistance = distance;
-                        tail = node;
-                        return true;
+                        head = node;
+                        return;
                     }
                     q.Enqueue(node);
                 }
             }
-
-            return false;
         }
 
         public string Output()
         {
-            Stack<int> path = new Stack<int>();
-            Node cur = tail;
+            StringBuilder sb = new StringBuilder();
+            Node cur = head;
+            sb.Append(start);
             while (cur != null)
             {
-                if (cur.Operation != -1)
+                if (cur.Opt != Operation.None)
                 {
-                    path.Push(cur.Operation);
+                    sb.Append(" " + OptNames[(int)cur.Opt]);
                 }
+
                 cur = cur.Parent;
             }
-
-            StringBuilder sb = new StringBuilder();
-            sb.Append(start);
-            foreach (var opt in path)
-            {
-                sb.Insert(0, "(");
-                switch (opt)
-                {
-                    case 0:
-                        sb.Append("+1");
-                        break;
-                    case 1:
-                        sb.Append("-1");
-                        break;
-                    case 2:
-                        sb.Append("x2");
-                        break;
-                    case 3:
-                        sb.Append("/2");
-                        break;
-                    case 4:
-                        sb.Append("^2");
-                        break;
-                    case 5:
-                        sb.Append("^3");
-                        break;
-                }
-                sb.Append(")");
-            }
-
             sb.Append("=" + target);
             return sb.ToString();
         }
 
-        private int Choose(int number, int operation)
+        /// 执行反向操作
+        private int AntiOperate(int number, Operation opt)
         {
-            switch (operation)
+            switch (opt)
             {
-                case 0:
-                    number++;
-                    break;
-                case 1:
+                case Operation.Increase:
                     number--;
                     break;
-                case 2:
-                    number *= 2;
+                case Operation.Decrease:
+                    number++;
                     break;
-                case 3:
+                case Operation.Double:
                     number /= 2;
                     break;
-                case 4:
-                    number *= number;
+                case Operation.Half:
+                    number *= 2;
                     break;
-                case 5:
-                    number = number * number * number;
+                case Operation.Square:
+                    number = Utils.IntSqrt(number);
+                    break;
+                case Operation.Cube:
+                    number = Utils.IntCubeRoot(number);
                     break;
             }
 
             return number;
         }
-    }
 
-    public class Node
-    {
-        public Node Parent;
-        public int Value;
-        public int Operation;
-        public int Distance;
-
-        public Node(Node parent, int value, int operation, int distance)
+        private bool CanAntiOperate(int number, Operation opt)
         {
-            Parent = parent;
-            Value = value;
-            Operation = operation;
-            Distance = distance;
+            switch (opt)
+            {
+                case Operation.Increase:
+                    return number > int.MinValue;
+                case Operation.Decrease:
+                    return number < int.MaxValue;
+                case Operation.Double:
+                    //number /= 2;
+                    return number % 2 == 0;
+                case Operation.Half:
+                    //number *= 2;
+                    return number < int.MaxValue / 2 && number > int.MinValue / 2;
+                case Operation.Square:
+                    if (number < 0)
+                    {
+                        return false;
+                    }
+                    int sqrt = Utils.IntSqrt(number);
+                    return sqrt * sqrt == number;
+                case Operation.Cube:
+                    int cubeRoot = Utils.IntCubeRoot(number);
+                    return cubeRoot * cubeRoot * cubeRoot == number;
+            }
+
+            return false;
         }
+
     }
 }
