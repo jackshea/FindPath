@@ -12,7 +12,7 @@ namespace FindPath.Core
         private HashSet<int> visited = new HashSet<int>();
 
         public int MaxDistance { get; private set; }
-        private string[] OptNames = new[] { "", "+1", "-1", "x2", "/2", "^2", "^3" };
+        private string[] OptNames = new[] { "", "+1", "-1", "x2", "/2", "^2", "^2", "^3" };
 
         // 反向搜索，从Target 找到Start.
         // 好处是防止平方立方溢出，且如果开方等操作会产出小数，则可以不进行开方操作，适当剪枝。
@@ -31,46 +31,59 @@ namespace FindPath.Core
             while (q.Count != 0)
             {
                 distance++;
-                Node top = q.Dequeue();
-                foreach (var op in Enum.GetValues(typeof(Operation)))
+                int count = q.Count;
+                for (int i = 0; i < count; i++)
                 {
-                    Operation opt = (Operation)op;
-                    if (model.HasFlag(Model.NoRepeat) && top.Opt == opt)
+                    Node top = q.Dequeue();
+                    foreach (var op in Enum.GetValues(typeof(Operation)))
                     {
-                        continue;
-                    }
+                        Operation opt = (Operation)op;
+                        if (model.HasFlag(Model.NoRepeat) && 
+                            (top.Opt == opt || 
+                             top.Opt == Operation.Square1 && opt == Operation.Square2||
+                             top.Opt == Operation.Square2 && opt == Operation.Square1))
+                        {
+                            continue;
+                        }
 
-                    if (!CanAntiOperate(top.Value, opt))
-                    {
-                        continue;
-                    }
+                        if (!CanAntiOperate(top.Value, opt))
+                        {
+                            continue;
+                        }
 
-                    var num = AntiOperate(top.Value, opt);
+                        var num = AntiOperate(top.Value, opt);
 
-                    if (visited.Contains(num))
-                    {
-                        continue;
-                    }
+                        if (visited.Contains(num * 10 + (int)opt))
+                        {
+                            continue;
+                        }
 
-                    visited.Add(num);
-                    var node = new Node(top, num, opt, distance);
-                    if ((!model.HasFlag(Model.Disturb) && num == start) ||
-                        model.HasFlag(Model.Disturb) && num == start + distance)
-                    {
-                        MaxDistance = distance;
-                        head = node;
-                        return;
+                        visited.Add(num * 10 + (int)opt);
+
+                        var node = new Node(top, num, opt, distance);
+                        if ((!model.HasFlag(Model.Disturb) && num == start) ||
+                            model.HasFlag(Model.Disturb) && num == start + distance)
+                        {
+                            MaxDistance = distance;
+                            head = node;
+                            return;
+                        }
+                        q.Enqueue(node);
+                        //Console.Out.WriteLine($"dist = {distance}, path = {Output(node)}, ans = {node.Value}");
                     }
-                    q.Enqueue(node);
                 }
             }
         }
 
         public string Output()
         {
+            return Output(head);
+        }
+
+        public string Output(Node node)
+        {
             StringBuilder sb = new StringBuilder();
-            Node cur = head;
-            sb.Append(start);
+            Node cur = node;
             while (cur != null)
             {
                 if (cur.Opt != Operation.None)
@@ -80,7 +93,6 @@ namespace FindPath.Core
 
                 cur = cur.Parent;
             }
-            sb.Append("=" + target);
             return sb.ToString();
         }
 
@@ -101,8 +113,11 @@ namespace FindPath.Core
                 case Operation.Half:
                     number *= 2;
                     break;
-                case Operation.Square:
+                case Operation.Square1:
                     number = Utils.IntSqrt(number);
+                    break;
+                case Operation.Square2:
+                    number = -Utils.IntSqrt(number);
                     break;
                 case Operation.Cube:
                     number = Utils.IntCubeRoot(number);
@@ -112,6 +127,7 @@ namespace FindPath.Core
             return number;
         }
 
+        /// 是否能执行反射操作
         private bool CanAntiOperate(int number, Operation opt)
         {
             switch (opt)
@@ -126,7 +142,8 @@ namespace FindPath.Core
                 case Operation.Half:
                     //number *= 2;
                     return number < int.MaxValue / 2 && number > int.MinValue / 2;
-                case Operation.Square:
+                case Operation.Square1:
+                case Operation.Square2:
                     if (number < 0)
                     {
                         return false;

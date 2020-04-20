@@ -8,7 +8,8 @@
         Decrease, // 减1
         Double, // 乘2
         Half, // 除2
-        Square, // 平方
+        Square1, // 平方
+        Square2, // 平方
         Cube, // 立方
     }
 }

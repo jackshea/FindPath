@@ -10,5 +10,6 @@ namespace FindPath.Core
         DoubleTarget = 2, // 双目标
         NoRepeat = 4, // 相邻的元素禁止重复 
         Disturb = 8, // 干扰，每次操作前会使当前值加1 
+        Reverse = 16, // 逆向
     }
 }
