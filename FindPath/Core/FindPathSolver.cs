@@ -14,6 +14,7 @@ namespace FindPath.Core
 
         public int MaxDistance { get; private set; }
         private string[] OptNames = new[] { "", "+1", "-1", "x2", "/2", "^2", "^2", "^3" };
+        private string[] constraint = new[] { "/2", "-1", "/2", "-1", "-1", "-1", "-1", "-1", "^3", "^3", "-1", "x2", "x2", "" };
 
         // 反向搜索，从Target 找到Start.
         // 好处是防止平方立方溢出，且如果开方等操作会产出小数，则可以不进行开方操作，适当剪枝。
@@ -76,6 +77,13 @@ namespace FindPath.Core
                             continue;
                         }
 
+                        // 为解决最后一道添加的约束条件
+                        //var optName = OptNames[(int)opt];
+                        //if (optName == constraint[distance] || optName == constraint[distance - 1])
+                        //{
+                        //    continue;
+                        //}
+
                         if (!CanAntiOperate(preNumber, opt))
                         {
                             continue;
@@ -92,7 +100,7 @@ namespace FindPath.Core
                         //visited.Add(visitedNode);
 
                         var node = new Node(top, num, opt, targetIndex);
-                        if (num == starts[targetIndex])
+                        if (num == starts[targetIndex] /*&& distance == constraint.Length - 1*/)
                         {
                             if (targetIndex == 0 && (starts.Length == 1 || top.Value == starts[top.TargetParent]))
                             {
