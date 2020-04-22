@@ -35,9 +35,15 @@ namespace FindPath.Core
 
             Queue<Node> q = new Queue<Node>();
             q.Enqueue(pre);
+            int disturbIndex = 0;
             while (q.Count != 0)
             {
                 distance++;
+                if ((model & Model.Disturb) != 0)
+                {
+                    starts[disturbIndex++ % targets.Length]++;
+                }
+
                 int count = q.Count;
                 for (int i = 0; i < count; i++)
                 {
@@ -86,11 +92,9 @@ namespace FindPath.Core
                         //visited.Add(visitedNode);
 
                         var node = new Node(top, num, opt, targetIndex);
-                        if ((!model.HasFlag(Model.Disturb) && num == starts[targetIndex]) ||
-                            model.HasFlag(Model.Disturb) && num == starts[targetIndex] + distance)
+                        if (num == starts[targetIndex])
                         {
-                            node.IsReached = true;
-                            if (top.IsReached)
+                            if (targetIndex == 0 && (starts.Length == 1 || top.Value == starts[top.TargetParent]))
                             {
                                 MaxDistance = distance;
                                 head = node;

@@ -6,7 +6,6 @@
         public int Value;
         public Operation Opt;
         public int TargetParent;
-        public bool IsReached;
 
         public Node(Node parent, int value, Operation operation, int targetParent)
         {
